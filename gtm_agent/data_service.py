@@ -15,7 +15,7 @@ from .gtm_records import OFFERINGS, PROSPECTS, REP_IDS
 __all__ = [
     "get_offering", "get_prospect_record", "update_prospect_info",
     "fetch_engagement_history", "fetch_account_details", "fetch_tech_stack",
-    "get_profile_from_db", "save_profile_to_db",
+    "get_profile_from_db", "save_profile_to_db", "sanitize_profile",
     "get_rep",
 ]
 
@@ -45,6 +45,14 @@ def get_rep(rep):
     return None
 
 
+def sanitize_profile(profile):
+    "Remove billing qualification data from a prospect profile."
+    if profile is None:
+        return None
+    return {key: value for key, value in profile.items()
+            if key != "billing_qualification"}
+
+
 @traceable(run_type="tool", name="fetch_engagement_history")
 def fetch_engagement_history(prospect_id):
     return PROSPECTS[prospect_id]["engagement_history"]
@@ -63,7 +71,11 @@ def fetch_tech_stack(prospect_id):
 @traceable(run_type="tool", name="get_profile_from_db")
 def get_profile_from_db(prospect_id):
     "Look up a stored prospect profile. Returns {'prospect_profile': record|None}."
-    return {"prospect_profile": _PROFILES.get(prospect_id)}
+    profile = _PROFILES.get(prospect_id)
+    if profile is not None:
+        profile = sanitize_profile(profile)
+        _PROFILES[prospect_id] = profile
+    return {"prospect_profile": profile}
 
 
 @traceable(run_type="tool", name="save_profile_to_db")
